@@ -4,7 +4,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -14,6 +16,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter
     @Override
     protected void configure(final HttpSecurity http) throws Exception
     {
+        AuthenticationFailureHandler handler = new SimpleUrlAuthenticationFailureHandler();
         http
                 .authorizeRequests(a -> a
                         .antMatchers("/", "/error", "/webjars/**").permitAll()
@@ -29,6 +32,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter
                 .csrf(c -> c
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
-                .oauth2Login();
+                .oauth2Login(o -> o
+                        .failureHandler((request, response, exception) -> {
+                            request.getSession().setAttribute("error.message", exception.getMessage());
+                            handler.onAuthenticationFailure(request, response, exception);
+                        })
+                );
     }
 }
